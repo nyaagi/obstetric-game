@@ -360,14 +360,12 @@
 
             // 背景画像の正確なパス指定（ケースセンシティブ）
             let bg = "";
-            if (p.hosp) bg = `assets/Inpatient/inpatient_${(w % 2) + 1}.png`;
-            else bg = `assets/Outpatient/outpatient_${(w % 3) + 1}.png`;
+            if (p.hosp) bg = `assets/Inpatient/inpatient_${(w % 2) + 1}.jpg`;
+            else bg = `assets/Outpatient/outpatient_${(w % 3) + 1}.jpg`;
             
-            // ローカル実行時の画像表示エラー対策（パスを確実にセット）
-            const img = new Image();
-            img.src = bg;
-            img.onload = () => { document.getElementById('game-container').style.backgroundImage = `url('${bg}')`; };
-            img.onerror = () => { console.error("Image not found: " + bg); };
+            // 直接背景にセット（プリロード済みのキャッシュを利用）
+            const container = document.getElementById('game-container');
+            container.style.backgroundImage = `url('${bg}')`;
 
             renderButtons();
         }
@@ -412,7 +410,7 @@
             document.getElementById('game-ui').style.display = 'none';
             document.getElementById('delivery-screen').style.display = 'flex';
             document.getElementById('del-reason-title').innerText = `【${Math.floor(p.week)}週】 理由: ${p.reason}`;
-            document.getElementById('game-container').style.backgroundImage = "url('assets/Delivery/delivery.png')";
+            document.getElementById('game-container').style.backgroundImage = "url('assets/Delivery/delivery.jpg')";
         }
 
         function executeDelivery(idx) {
@@ -450,17 +448,17 @@
             }
             
             // フォルダ名 "outcume" に合わせる（KKさんの環境のタイポに合わせる）
-            let bg = p.err ? "assets/outcume/bad.png" : "assets/outcume/delivery_good.png";
+            let bg = p.err ? "assets/outcume/bad.jpg" : "assets/outcume/delivery_good.jpg";
             document.getElementById('game-container').style.backgroundImage = `url('${bg}')`;
         }
 
         // 画像プリロード機能 (高速化)
         const ASSETS = [
-            'mainmenu/mainmenu.png',
-            'Outpatient/outpatient_1.png', 'Outpatient/outpatient_2.png', 'Outpatient/outpatient_3.png',
-            'Inpatient/inpatient_1.png', 'Inpatient/inpatient_2.png', 'Inpatient/inpatient_3.png',
-            'Delivery/delivery.png',
-            'outcume/delivery_good.png', 'outcume/bad.png'
+            'assets/mainmenu/mainmenu.jpg',
+            'assets/Outpatient/outpatient_1.jpg', 'assets/Outpatient/outpatient_2.jpg', 'assets/Outpatient/outpatient_3.jpg',
+            'assets/Inpatient/inpatient_1.jpg', 'assets/Inpatient/inpatient_2.jpg',
+            'assets/Delivery/delivery.jpg',
+            'assets/outcume/delivery_good.jpg', 'assets/outcume/bad.jpg'
         ];
 
         function preloadImages() {
@@ -472,7 +470,7 @@
 
         // 初期背景とプリロード開始
         window.onload = () => { 
-            document.getElementById('game-container').style.backgroundImage = "url('assets/mainmenu/mainmenu.png')";
+            document.getElementById('game-container').style.backgroundImage = "url('assets/mainmenu/mainmenu.jpg')";
             preloadImages(); 
         };
     </script>

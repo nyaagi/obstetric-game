@@ -375,7 +375,7 @@
             grid.innerHTML = "";
             selected.clear();
             let opts = p.hosp ? 
-                ["安静継続", "塩分制限食", "降圧薬/抑制剤", "NST毎日実施", "入院継続", "分娩決定"] :
+                ["安静継続", "塩分制限食", "降圧薬/抑制剤", "NST毎日実施", "退院許可", "分娩決定"] :
                 ["妊婦健診", "1週後再診", "2-3日後再診", "自宅安静指示", "鉄剤処方", "管理入院判断"];
             if (p.gdm && !p.ins && p.hosp) opts[1] = "インスリン導入";
 
@@ -397,6 +397,7 @@
                 if (t.includes("1週後")) step = 1.0;
                 if (t.includes("2-3日後")) step = 0.5;
                 if (t.includes("入院")) p.hosp = true;
+                if (t.includes("退院")) p.hosp = false;
                 if (t.includes("インスリン")) { p.ins = true; p.hosp = true; }
                 if (t.includes("降圧薬") || t.includes("抑制剤")) p.med = true;
                 if (t.includes("安静")) p.rest = true;

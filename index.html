@@ -360,8 +360,8 @@
 
             // 背景画像の正確なパス指定（ケースセンシティブ）
             let bg = "";
-            if (p.hosp) bg = `assets/Inpatient/inpatient_${(w % 2) + 1}.jpg`;
-            else bg = `assets/Outpatient/outpatient_${(w % 3) + 1}.jpg`;
+            if (p.hosp) bg = `assets/inpatient/inpatient_${(w % 2) + 1}.jpg`;
+            else bg = `assets/outpatient/outpatient_${(w % 3) + 1}.jpg`;
             
             // 直接背景にセット（プリロード済みのキャッシュを利用）
             const container = document.getElementById('game-container');
@@ -410,7 +410,7 @@
             document.getElementById('game-ui').style.display = 'none';
             document.getElementById('delivery-screen').style.display = 'flex';
             document.getElementById('del-reason-title').innerText = `【${Math.floor(p.week)}週】 理由: ${p.reason}`;
-            document.getElementById('game-container').style.backgroundImage = "url('assets/Delivery/delivery.jpg')";
+            document.getElementById('game-container').style.backgroundImage = "url('assets/delivery/delivery.jpg')";
         }
 
         function executeDelivery(idx) {
@@ -455,9 +455,9 @@
         // 画像プリロード機能 (高速化)
         const ASSETS = [
             'assets/mainmenu/mainmenu.jpg',
-            'assets/Outpatient/outpatient_1.jpg', 'assets/Outpatient/outpatient_2.jpg', 'assets/Outpatient/outpatient_3.jpg',
-            'assets/Inpatient/inpatient_1.jpg', 'assets/Inpatient/inpatient_2.jpg',
-            'assets/Delivery/delivery.jpg',
+            'assets/outpatient/outpatient_1.jpg', 'assets/outpatient/outpatient_2.jpg', 'assets/outpatient/outpatient_3.jpg',
+            'assets/inpatient/inpatient_1.jpg', 'assets/inpatient/inpatient_2.jpg',
+            'assets/delivery/delivery.jpg',
             'assets/outcume/delivery_good.jpg', 'assets/outcume/bad.jpg'
         ];
 

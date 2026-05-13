@@ -48,7 +48,7 @@
         function resizeGame() {
             const container = document.getElementById('game-container');
             const scale = Math.min(window.innerWidth / 896, window.innerHeight / 504);
-            container.style.transform = `scale(${scale})`;
+            container.style.transform = `translate(-50%, -50%) scale(${scale})`;
         }
         window.addEventListener('resize', resizeGame);
         window.addEventListener('orientationchange', () => setTimeout(resizeGame, 100));

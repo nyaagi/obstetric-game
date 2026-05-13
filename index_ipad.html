@@ -1,44 +1,235 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>産科臨床シミュレーター iPad版</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap"
+        rel="stylesheet">
     <style>
-        :root { --glass: rgba(255, 255, 255, 0.92); --danger: #cc0000; --info: #0066cc; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', 'Noto Sans JP', sans-serif; background: #000; position: fixed; top: 0; left: 0; right: 0; bottom: 0; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
-        
+        :root {
+            --glass: rgba(255, 255, 255, 0.92);
+            --danger: #cc0000;
+            --info: #0066cc;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background: #000;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
         /* 1366x768 固定コンテナ */
-        #game-container { position: absolute; left: 50%; top: 50%; width: 1366px; height: 768px; background-color: #222; background-size: cover; background-position: center; background-repeat: no-repeat; transition: background-image 0.4s ease; transform-origin: center center; }
+        #game-container {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 1366px;
+            height: 768px;
+            background-color: #222;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: background-image 0.4s ease;
+            transform-origin: center center;
+        }
 
         /* iPad UI */
-        #game-ui { position: absolute; top: 15px; left: 680px; right: 40px; bottom: 70px; display: none; flex-direction: column; gap: 15px; z-index: 10; }
-        #header-area { font-size: 34px; font-weight: 700; color: #000; text-shadow: 0 0 8px rgba(255,255,255,0.8); }
-        #soa-panel { background: var(--glass); border-radius: 10px; padding: 15px; flex-grow: 1; display: flex; gap: 15px; box-shadow: 0 6px 20px rgba(0,0,0,0.2); overflow-y: auto; }
-        .soa-col { flex: 1; display: flex; flex-direction: column; }
-        .soa-title { font-size: 26px; font-weight: 700; margin-bottom: 4px; border-left: 6px solid #333; padding-left: 10px; }
-        .soa-content { font-size: 22px; line-height: 1.35; white-space: pre-wrap; margin-bottom: 10px; }
-        .lab-box { margin-top: 8px; padding: 10px; border: 2px solid #666; border-radius: 6px; background: rgba(255,255,255,0.7); font-size: 20px; }
-        .lab-header { color: #666; font-size: 18px; border-bottom: 1px solid #ccc; margin-bottom: 6px; }
-        .lab-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
-        .lab-warn { color: var(--danger); font-weight: 700; }
-        #action-area { display: flex; gap: 15px; height: 200px; }
-        #btn-grid { display: grid; grid-template-columns: repeat(2, 230px); grid-template-rows: repeat(3, 1fr); gap: 10px 15px; }
-        .btn { background: white; border: 2px solid #333; border-radius: 8px; font-size: 20px; font-weight: 700; cursor: pointer; display: flex; justify-content: center; align-items: center; }
-        .btn.selected { background: #222; color: white; border-color: #fff; }
-        #confirm-btn { width: 100px; background: #cc0000; color: white; border: 2px solid white; border-radius: 8px; font-size: 24px; font-weight: 700; writing-mode: vertical-rl; text-orientation: upright; letter-spacing: 4px; cursor: pointer; }
-        
-        #menu-screen { position: absolute; top:0; left:0; width:100%; height:100%; display: flex; z-index: 100; }
-        .menu-half { flex: 1; display: flex; justify-content: center; align-items: center; }
-        .mode-card { background: white; padding: 30px 40px; border-radius: 16px; min-width: 360px; text-align: center; border: 4px solid #333; white-space: nowrap; }
-        .mode-card h2 { font-size: 32px; margin-bottom: 10px; }
-        .mode-card p { font-size: 18px; margin-bottom: 20px; color: #666; }
-        
-        #outcome-screen, #delivery-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.95); display: none; padding: 40px; z-index: 200; flex-direction: column; justify-content: center; }
+        #game-ui {
+            position: absolute;
+            top: 15px;
+            left: 680px;
+            right: 40px;
+            bottom: 70px;
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+            z-index: 10;
+        }
+
+        #header-area {
+            font-size: 34px;
+            font-weight: 700;
+            color: #000;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+        }
+
+        #soa-panel {
+            background: var(--glass);
+            border-radius: 10px;
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            gap: 15px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            overflow-y: auto;
+        }
+
+        .soa-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .soa-title {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            border-left: 6px solid #333;
+            padding-left: 10px;
+        }
+
+        .soa-content {
+            font-size: 22px;
+            line-height: 1.35;
+            white-space: pre-wrap;
+            margin-bottom: 10px;
+        }
+
+        .lab-box {
+            margin-top: 8px;
+            padding: 10px;
+            border: 2px solid #666;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.7);
+            font-size: 20px;
+        }
+
+        .lab-header {
+            color: #666;
+            font-size: 18px;
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 6px;
+        }
+
+        .lab-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+
+        .lab-warn {
+            color: var(--danger);
+            font-weight: 700;
+        }
+
+        #action-area {
+            display: flex;
+            gap: 15px;
+            height: 200px;
+        }
+
+        #btn-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 230px);
+            grid-template-rows: repeat(3, 1fr);
+            gap: 10px 15px;
+        }
+
+        .btn {
+            background: white;
+            border: 2px solid #333;
+            border-radius: 8px;
+            font-size: 20px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn.selected {
+            background: #222;
+            color: white;
+            border-color: #fff;
+        }
+
+        #confirm-btn {
+            width: 100px;
+            background: #cc0000;
+            color: white;
+            border: 2px solid white;
+            border-radius: 8px;
+            font-size: 24px;
+            font-weight: 700;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            letter-spacing: 4px;
+            cursor: pointer;
+        }
+
+        #menu-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            z-index: 100;
+        }
+
+        .menu-half {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .mode-card {
+            background: white;
+            padding: 30px 40px;
+            border-radius: 16px;
+            min-width: 360px;
+            text-align: center;
+            border: 4px solid #333;
+            white-space: nowrap;
+        }
+
+        .mode-card h2 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .mode-card p {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: #666;
+        }
+
+        #outcome-screen,
+        #delivery-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: none;
+            padding: 40px;
+            z-index: 200;
+            flex-direction: column;
+            justify-content: center;
+        }
     </style>
 </head>
+
 <body>
     <div id="game-container">
         <div id="menu-screen">
@@ -53,7 +244,8 @@
                 <div class="mode-card" style="border-color: #cc0000;">
                     <h2 style="color:#cc0000;">高度医療センター</h2>
                     <p>ハイリスク妊娠が集約<br>難易度: ★★★★★</p>
-                    <button class="btn" style="width:100%; height:60px; background:#cc0000; color:white;" onclick="initGame('High-Risk')">勤務開始</button>
+                    <button class="btn" style="width:100%; height:60px; background:#cc0000; color:white;"
+                        onclick="initGame('High-Risk')">勤務開始</button>
                 </div>
             </div>
         </div>
@@ -81,28 +273,34 @@
 
         <div id="delivery-screen">
             <h1 style="font-size:60px; text-align:center; margin-bottom:20px;">分娩方針の選択</h1>
-            <h2 id="del-reason-title" style="font-size:30px; text-align:center; color:#cc0000; margin-bottom:40px;"></h2>
-            <div style="display:flex; flex-wrap:wrap; gap:20px; justify-content:center; max-width: 800px; margin: 0 auto;">
+            <h2 id="del-reason-title" style="font-size:30px; text-align:center; color:#cc0000; margin-bottom:40px;">
+            </h2>
+            <div
+                style="display:flex; flex-wrap:wrap; gap:20px; justify-content:center; max-width: 800px; margin: 0 auto;">
                 <button class="btn" style="width:300px; height:80px;" onclick="executeDelivery(1)">経膣分娩試行</button>
                 <button class="btn" style="width:300px; height:80px;" onclick="executeDelivery(2)">分娩誘発</button>
                 <button class="btn" style="width:300px; height:80px;" onclick="executeDelivery(3)">予定帝王切開</button>
                 <button class="btn" style="width:300px; height:80px;" onclick="executeDelivery(4)">緊急帝王切開</button>
-                <button class="btn" style="width:620px; height:80px; border-color:#cc0000; color:#cc0000;" onclick="executeDelivery(5)">超緊急帝王切開</button>
+                <button class="btn" style="width:620px; height:80px; border-color:#cc0000; color:#cc0000;"
+                    onclick="executeDelivery(5)">超緊急帝王切開</button>
             </div>
         </div>
         <div id="outcome-screen">
             <h1 id="outcome-title" style="font-size:60px; text-align:center; margin-bottom:30px;">分娩要約</h1>
             <div style="display:flex; gap:30px; flex-grow:1;">
-                <div class="soa-panel" style="flex:1; background:#f9f9f9; padding:20px; border-radius:12px; border:1px solid #ddd;">
+                <div class="soa-panel"
+                    style="flex:1; background:#f9f9f9; padding:20px; border-radius:12px; border:1px solid #ddd;">
                     <div class="soa-title">分娩結果</div>
                     <div id="outcome-desc" class="soa-content" style="font-size:30px;"></div>
                 </div>
-                <div class="soa-panel" style="flex:1; background:#f9f9f9; padding:20px; border-radius:12px; border:1px solid #ddd;">
+                <div class="soa-panel"
+                    style="flex:1; background:#f9f9f9; padding:20px; border-radius:12px; border:1px solid #ddd;">
                     <div class="soa-title">臨床評価</div>
                     <div id="outcome-audit" style="font-size:24px; line-height:1.6;"></div>
                 </div>
             </div>
-            <button class="btn" style="width:300px; height:80px; margin:30px auto 0;" onclick="location.reload()">次の症例へ</button>
+            <button class="btn" style="width:300px; height:80px; margin:30px auto 0;"
+                onclick="location.reload()">次の症例へ</button>
         </div>
     </div>
 
@@ -115,10 +313,12 @@
         }
         window.addEventListener('resize', resizeGame);
         window.addEventListener('orientationchange', () => setTimeout(resizeGame, 100));
-        window.onload = () => { 
+        window.onload = () => {
             resizeGame();
             document.getElementById('game-container').style.backgroundImage = "url('assets/mainmenu/mainmenu.jpg')";
+            if (typeof preloadImages === 'function') preloadImages();
         };
     </script>
 </body>
+
 </html>

@@ -2,11 +2,10 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>産科臨床シミュレーター Web Pro v2.5</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        /* UIと文字サイズをデバイスの画面サイズ(vw/vh)に応じて動的に可変させる設定 */
         :root {
             --glass: rgba(255, 255, 255, 0.92);
             --danger: #cc0000;
@@ -14,185 +13,94 @@
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        /* スマホブラウザ特有のバーの干渉やスクロールを完全に防ぐ */
         body {
             font-family: 'Inter', 'Noto Sans JP', sans-serif;
             background: #000;
-            height: 100vh;
-            width: 100vw;
+            position: fixed; /* 画面を固定 */
+            top: 0; left: 0; right: 0; bottom: 0; /* 画面全体に広げる */
             display: flex;
             justify-content: center;
             align-items: center;
             overflow: hidden;
             touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
+        /* 16:9の仮想キャンバス */
         #game-container {
             position: relative;
-            width: 100vw;
-            height: 100vh;
+            width: 1920px;
+            height: 1080px;
             background-color: #222;
-            background-size: cover;
-            background-position: center bottom;
+            /* coverではなく100% 100%にすることで、コンテナ内に画像を強制的にピッタリ収める */
+            background-size: 100% 100%;
+            background-position: center;
             background-repeat: no-repeat;
+            image-rendering: -webkit-optimize-contrast;
             transition: background-image 0.4s ease;
-            display: flex;
-            justify-content: flex-end;
+            transform-origin: center center;
         }
 
         #game-ui {
-            width: 55%;
-            min-width: 320px;
-            max-width: 800px;
-            height: 100%;
-            padding: 2vh 2vw;
+            position: absolute;
+            top: 50px;
+            left: 800px;
+            right: 60px;
+            bottom: 40px;
             display: none;
             flex-direction: column;
-            gap: 1.5vh;
+            gap: 20px;
             z-index: 10;
         }
 
-        #header-area {
-            font-size: clamp(1.2rem, 3.5vw, 3rem);
-            font-weight: 700;
-            color: #000;
-            text-shadow: 0 0 8px rgba(255,255,255,0.9);
-        }
+        #header-area { font-size: 48px; font-weight: 700; color: #000; text-shadow: 0 0 10px rgba(255,255,255,0.8); }
 
-        #soa-panel {
-            background: var(--glass);
-            border-radius: 12px;
-            padding: 2vh 2vw;
-            flex-grow: 1;
-            display: flex;
-            gap: 2vw;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-            overflow-y: auto;
-        }
-
+        #soa-panel { background: var(--glass); border-radius: 12px; padding: 20px; flex-grow: 1; display: flex; gap: 25px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); overflow-y: auto; }
         .soa-col { flex: 1; display: flex; flex-direction: column; }
-        .soa-title { font-size: clamp(1rem, 2.5vw, 2.2rem); font-weight: 700; margin-bottom: 0.5vh; color: #000; border-left: 6px solid #333; padding-left: 1vw; }
-        .soa-content { font-size: clamp(0.9rem, 2vw, 1.8rem); line-height: 1.4; white-space: pre-wrap; color: #111; margin-bottom: 1vh; }
+        .soa-title { font-size: 36px; font-weight: 700; margin-bottom: 5px; color: #000; border-left: 8px solid #333; padding-left: 12px; }
+        .soa-content { font-size: 32px; line-height: 1.35; white-space: pre-wrap; color: #111; margin-bottom: 15px; }
 
-        .lab-box {
-            margin-top: 1vh;
-            padding: 1.5vh 1vw;
-            border: 2px solid #666;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.7);
-            font-size: clamp(0.85rem, 1.8vw, 1.6rem);
-        }
-        .lab-header { color: #666; font-size: clamp(0.75rem, 1.6vw, 1.4rem); border-bottom: 1px solid #ccc; margin-bottom: 0.5vh; }
+        .lab-box { margin-top: 10px; padding: 15px; border: 2px solid #666; border-radius: 8px; background: rgba(255,255,255,0.7); font-size: 28px; }
+        .lab-header { color: #666; font-size: 24px; border-bottom: 1px solid #ccc; margin-bottom: 8px; }
         .lab-row { display: flex; justify-content: space-between; margin-bottom: 2px; }
         .lab-warn { color: var(--danger); font-weight: 700; }
 
-        #action-area {
-            display: flex;
-            gap: 1vw;
-            height: 35%;
-            min-height: 160px;
-        }
+        #action-area { display: flex; gap: 20px; height: 280px; }
+        #btn-grid { display: grid; grid-template-columns: repeat(2, 320px); grid-template-rows: repeat(3, 1fr); gap: 15px 20px; }
 
-        #btn-grid {
-            flex-grow: 1;
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 1vh 1vw;
-        }
-
-        .btn {
-            background: white;
-            border: 3px solid #333;
-            border-radius: 8px;
-            font-size: clamp(0.9rem, 2vw, 1.6rem);
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: all 0.2s;
-            text-align: center;
-            padding: 0.5vh;
-        }
+        .btn { background: white; border: 3px solid #333; border-radius: 12px; font-size: 28px; font-weight: 700; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; }
         .btn.selected { background: #222; color: white; border-color: #fff; }
 
-        #confirm-btn {
-            width: 15%;
-            min-width: 50px;
-            background: #cc0000;
-            color: white;
-            border: 3px solid white;
-            border-radius: 8px;
-            font-size: clamp(1rem, 2.2vw, 1.8rem);
-            font-weight: 700;
-            cursor: pointer;
-            writing-mode: vertical-rl;
-            text-orientation: upright;
-            letter-spacing: 0.5vh;
-        }
+        #confirm-btn { width: 140px; background: #cc0000; color: white; border: 3px solid white; border-radius: 12px; font-size: 32px; font-weight: 700; cursor: pointer; writing-mode: vertical-rl; text-orientation: upright; letter-spacing: 6px; }
 
-        #menu-screen {
-            position: absolute;
-            top:0; left:0; width:100%; height:100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 5vw;
-            z-index: 100;
-            padding: 5vw;
-        }
-        .mode-card { background: white; padding: 4vh 4vw; border-radius: 16px; width: 40vw; max-width: 400px; text-align: center; border: 4px solid #333; }
-        .mode-card h2 { font-size: clamp(1.4rem, 3.2vw, 2.6rem); margin-bottom: 1vh; }
-        .mode-card p { font-size: clamp(0.9rem, 1.8vw, 1.4rem); margin-bottom: 3vh; color: #666; }
+        #menu-screen { position: absolute; top:0; left:0; width:100%; height:100%; display: flex; z-index: 100; }
+        .menu-half { flex: 1; display: flex; justify-content: center; align-items: center; }
+        .mode-card { background: white; padding: 40px 50px; border-radius: 20px; min-width: 480px; text-align: center; border: 5px solid #333; white-space: nowrap; }
+        .mode-card h2 { font-size: 42px; margin-bottom: 15px; }
+        .mode-card p { font-size: 24px; margin-bottom: 30px; color: #666; line-height: 1.5; }
 
-        #outcome-screen, #delivery-screen {
-            position: absolute;
-            top:0; left:0; width:100%; height:100%;
-            background: rgba(255,255,255,0.95);
-            display: none;
-            padding: 5vh 5vw;
-            z-index: 200;
-            flex-direction: column;
-            justify-content: center;
-        }
-        
-        .delivery-btn-container {
-            display:flex; flex-wrap:wrap; gap:2vw; justify-content:center; max-width: 900px; margin: 0 auto; width: 100%;
-        }
-        .delivery-btn {
-            width: 45%; height: 12vh; min-height: 60px;
-        }
-        .delivery-btn-wide {
-            width: 92%; height: 12vh; min-height: 60px; border-color:#cc0000; color:#cc0000;
-        }
-        
-        .outcome-panel-container {
-            display:flex; gap:3vw; flex-grow:1; flex-direction: row;
-        }
-        .outcome-panel {
-            flex:1; background:#f9f9f9; padding:3vh 3vw; border-radius:12px; border:1px solid #ddd; display:flex; flex-direction:column;
-        }
-        
-        @media (max-aspect-ratio: 1/1) {
-            /* 縦長画面用フォールバック（基本横向きを想定） */
-            #game-ui { width: 100%; height: 60%; align-self: flex-end; }
-            #action-area { height: 40%; }
-            .outcome-panel-container { flex-direction: column; }
-        }
+        #outcome-screen, #delivery-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.95); display: none; padding: 60px; z-index: 200; flex-direction: column; justify-content: center; }
     </style>
 </head>
 <body>
     <div id="game-container">
         <div id="menu-screen">
-            <div class="mode-card">
-                <h2>一般産科医院</h2>
-                <p>ローリスク中心<br>難易度: ★★☆☆☆</p>
-                <button class="btn" style="width:100%; height:8vh; min-height:50px;" onclick="initGame('Standard')">勤務開始</button>
+            <div class="menu-half">
+                <div class="mode-card">
+                    <h2>一般産科医院</h2>
+                    <p>ローリスク中心<br>難易度: ★★☆☆☆</p>
+                    <button class="btn" style="width:100%; height:80px;" onclick="initGame('Standard')">勤務開始</button>
+                </div>
             </div>
-            <div class="mode-card" style="border-color: #cc0000;">
-                <h2 style="color:#cc0000;">高度医療センター</h2>
-                <p>ハイリスク妊娠が集約<br>難易度: ★★★★★</p>
-                <button class="btn" style="width:100%; height:8vh; min-height:50px; background:#cc0000; color:white;" onclick="initGame('High-Risk')">勤務開始</button>
+            <div class="menu-half">
+                <div class="mode-card" style="border-color: #cc0000;">
+                    <h2 style="color:#cc0000;">高度医療センター</h2>
+                    <p>ハイリスク妊娠が集約<br>難易度: ★★★★★</p>
+                    <button class="btn" style="width:100%; height:80px; background:#cc0000; color:white;" onclick="initGame('High-Risk')">勤務開始</button>
+                </div>
             </div>
         </div>
 
@@ -218,38 +126,55 @@
         </div>
 
         <div id="delivery-screen">
-            <h1 style="font-size:clamp(2rem, 5vw, 4rem); text-align:center; margin-bottom:2vh;">分娩方針の選択</h1>
-            <h2 id="del-reason-title" style="font-size:clamp(1.2rem, 3vw, 2.5rem); text-align:center; color:#cc0000; margin-bottom:4vh;"></h2>
-            <div class="delivery-btn-container">
-                <button class="btn delivery-btn" onclick="executeDelivery(1)">経膣分娩試行</button>
-                <button class="btn delivery-btn" onclick="executeDelivery(2)">分娩誘発</button>
-                <button class="btn delivery-btn" onclick="executeDelivery(3)">予定帝王切開</button>
-                <button class="btn delivery-btn" onclick="executeDelivery(4)">緊急帝王切開</button>
-                <button class="btn delivery-btn-wide" onclick="executeDelivery(5)">超緊急帝王切開</button>
+            <h1 style="font-size:80px; text-align:center; margin-bottom:20px;">分娩方針の選択</h1>
+            <h2 id="del-reason-title" style="font-size:40px; text-align:center; color:#cc0000; margin-bottom:50px;"></h2>
+            <div style="display:flex; flex-wrap:wrap; gap:30px; justify-content:center; max-width: 1000px; margin: 0 auto;">
+                <button class="btn" style="width:400px; height:100px;" onclick="executeDelivery(1)">経膣分娩試行</button>
+                <button class="btn" style="width:400px; height:100px;" onclick="executeDelivery(2)">分娩誘発</button>
+                <button class="btn" style="width:400px; height:100px;" onclick="executeDelivery(3)">予定帝王切開</button>
+                <button class="btn" style="width:400px; height:100px;" onclick="executeDelivery(4)">緊急帝王切開</button>
+                <button class="btn" style="width:830px; height:100px; border-color:#cc0000; color:#cc0000;" onclick="executeDelivery(5)">超緊急帝王切開</button>
             </div>
         </div>
 
         <div id="outcome-screen">
-            <h1 id="outcome-title" style="font-size:clamp(2.5rem, 5vw, 4.5rem); text-align:center; margin-bottom:3vh;">分娩要約</h1>
-            <div class="outcome-panel-container">
-                <div class="outcome-panel">
+            <h1 id="outcome-title" style="font-size:80px; text-align:center; margin-bottom:40px;">分娩要約</h1>
+            <div style="display:flex; gap:40px; flex-grow:1;">
+                <div class="soa-panel" style="flex:1; background:#f9f9f9; padding:30px; border-radius:15px; border:1px solid #ddd;">
                     <div class="soa-title">分娩結果</div>
-                    <div id="outcome-desc" class="soa-content" style="font-size:clamp(1.2rem, 2.5vw, 2.2rem);"></div>
+                    <div id="outcome-desc" class="soa-content" style="font-size:40px;"></div>
                 </div>
-                <div class="outcome-panel">
+                <div class="soa-panel" style="flex:1; background:#f9f9f9; padding:30px; border-radius:15px; border:1px solid #ddd;">
                     <div class="soa-title">臨床評価</div>
-                    <div id="outcome-audit" style="font-size:clamp(1rem, 2vw, 1.8rem); line-height:1.6;"></div>
+                    <div id="outcome-audit" style="font-size:30px; line-height:1.6;"></div>
                 </div>
             </div>
-            <button class="btn" style="width:50%; max-width:400px; height:10vh; min-height:60px; margin:4vh auto 0;" onclick="location.reload()">次の症例へ</button>
+            <button class="btn" style="width:400px; height:100px; margin:40px auto 0;" onclick="location.reload()">次の症例へ</button>
         </div>
     </div>
 
     <script>
-        // ゲームロジック変更なし
-        const EFW_DATA = {
-            18: 200, 20: 300, 22: 450, 24: 650, 26: 900, 28: 1200, 30: 1500, 32: 1850, 34: 2200, 36: 2550, 38: 2900, 40: 3200, 42: 3450
-        };
+        function resizeGame() {
+            const container = document.getElementById('game-container');
+            // ブラウザの実際の表示領域をより正確に取得
+            const windowWidth = document.documentElement.clientWidth;
+            const windowHeight = document.documentElement.clientHeight;
+            
+            const baseWidth = 1920;
+            const baseHeight = 1080;
+            
+            // 98%のサイズにすることで、ブラウザ枠の微妙な誤差によるはみ出しを確実に防ぐ
+            const scale = Math.min(windowWidth / baseWidth, windowHeight / baseHeight) * 0.98;
+            
+            container.style.transform = `scale(${scale})`;
+        }
+
+        window.addEventListener('resize', resizeGame);
+        // スマホで向きを変えた時などに対応
+        window.addEventListener('orientationchange', () => setTimeout(resizeGame, 100));
+
+        // --- ゲームのロジック ---
+        const EFW_DATA = { 18: 200, 20: 300, 22: 450, 24: 650, 26: 900, 28: 1200, 30: 1500, 32: 1850, 34: 2200, 36: 2550, 38: 2900, 40: 3200, 42: 3450 };
         const getEfw = (w) => {
             const keys = Object.keys(EFW_DATA).map(Number).sort((a,b)=>a-b);
             if (w < 18) return 0;
@@ -490,6 +415,7 @@
         }
 
         window.onload = () => { 
+            resizeGame();
             document.getElementById('game-container').style.backgroundImage = "url('assets/mainmenu/mainmenu.jpg')";
             preloadImages(); 
         };

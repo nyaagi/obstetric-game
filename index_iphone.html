@@ -49,9 +49,9 @@
     function resizeGame() {
         const container = document.getElementById('game-container');
         // ★以下の数値（1920と1080）は、PC/iPad/iPhoneそれぞれのHTMLに合わせて変更してください
-        const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
-        container.style.transform = `scale(${scale})`;
-    }
+        const scale = Math.min(window.innerWidth / 896, window.innerHeight / 504);
+            container.style.transform = `scale(${scale})`;
+        }
     window.addEventListener('resize', resizeGame);
     window.addEventListener('orientationchange', () => setTimeout(resizeGame, 100));
 

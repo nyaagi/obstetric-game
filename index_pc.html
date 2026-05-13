@@ -26,27 +26,27 @@
             font-family: 'Inter', 'Noto Sans JP', sans-serif;
             background: #000;
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden; /* flex関連の記述を削除 */
             touch-action: none;
+            -webkit-user-select: none;
             user-select: none;
         }
 
-        /* PC用 1920x1080 固定コンテナ */
         #game-container {
-            position: relative;
+            /* absoluteで中央の起点を設定 */
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            
             width: 1920px;
             height: 1080px;
             background-color: #222;
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            image-rendering: -webkit-optimize-contrast;
+            transition: background-image 0.4s ease;
             transform-origin: center center;
         }
 
@@ -237,9 +237,16 @@
     <script>
         function resizeGame() {
             const container = document.getElementById('game-container');
-            // ★以下の数値（1920と1080）は、PC/iPad/iPhoneそれぞれのHTMLに合わせて変更してください
-            const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
-            container.style.transform = `scale(${scale})`;
+            const windowWidth = document.documentElement.clientWidth;
+            const windowHeight = document.documentElement.clientHeight;
+            
+            const baseWidth = 1920; 
+            const baseHeight = 1080; 
+            
+            const scale = Math.min(windowWidth / baseWidth, windowHeight / baseHeight);
+            
+            // scaleの前に、translate(-50%, -50%) を追加してズレを防止
+            container.style.transform = `translate(-50%, -50%) scale(${scale})`;
         }
         window.addEventListener('resize', resizeGame);
         window.addEventListener('orientationchange', () => setTimeout(resizeGame, 100));

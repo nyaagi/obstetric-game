@@ -286,8 +286,13 @@ function nextWeek() {
         if (t.includes("分娩方針")) { p.needDel = true; p.reason = p.reason || "分娩方針決定"; }
     });
     
-    p.simulate(step);
-    if (p.needDel) showDeliveryPhase(); else updateUI();
+    // 分娩フラグが立っている場合は即座に移行（シミュレートを挟まない）
+    if (p.needDel) {
+        showDeliveryPhase();
+    } else {
+        p.simulate(step);
+        if (p.needDel) showDeliveryPhase(); else updateUI();
+    }
 }
 
 function showDeliveryPhase() {
@@ -316,33 +321,50 @@ function executeDelivery(idx) {
     let modes = ["経膣分娩", "分娩誘発", "予定帝王切開", "緊急帝王切開", "超緊急帝王切開"];
     p.delMode = modes[idx - 1];
 
-    if (idx === 3 || idx === 5) {
+    // 予定帝王切開(3)、緊急帝王切開(4)、超緊急帝王切開(5) は即座に結果へ
+    if (idx >= 3) {
         showOutcome();
         return;
     }
+    
+    // 経膣系は分娩管理フェーズへ
     p.laborHours = 0;
     showLaborManagement(idx);
 }
 
 function showLaborManagement(initialIdx) {
     const screen = document.getElementById('delivery-screen');
+    const isHighRisk = (p.hdp || p.fgr || p.twin || p.week < 37 || p.gdm);
+
     if (p.laborHours === 0) {
-        p.bishop = Math.floor(Math.random() * 5) + (p.parity === 1 ? 3 : 1);
+        p.bishop = Math.floor(Math.random() * 4) + (p.parity === 1 ? 4 : 2);
+        if (isHighRisk) p.bishop -= 1;
         p.fhr = 1;
     } else {
         p.bishop += Math.floor(Math.random() * 3);
         if (p.bishop > 13) p.bishop = 13;
-        if (Math.random() < (p.fgr ? 0.25 : 0.08)) p.fhr = 3;
+
+        // --- 異常出現率ロジック ---
+        // 初産婦: 12hまで10%、以降20% | 経産婦: 6hまで10%、以降20%
+        let threshold = (p.parity === 0) ? 12 : 6;
+        let abnProb = (p.laborHours < threshold) ? 0.10 : 0.20;
+        
+        // 合併症がある場合はリスクを上乗せ
+        if (isHighRisk) abnProb += 0.05;
+        
+        if (Math.random() < abnProb) p.fhr = 3; // Cat III発生
     }
     
     let dilation = Math.min(10, Math.floor(p.bishop * 0.8));
     let station = Math.floor(p.bishop / 3) - 2;
     if (p.bishop >= 12) station = 3;
 
-    let ctgDetail = p.fhr === 3 ? "細変動消失・遅発一過性徐脈" : "基線 140bpm・細変動良好";
-    let deliveryDone = (dilation >= 10 && station >= 2 && Math.random() < 0.75);
+    let ctgDetail = p.fhr === 3 ? "細変動消失・遅発一過性徐脈" : "基線 145bpm・細変動良好";
+    // 通常ケースは80%成功、ハイリスクは成功率を下げる（帝切率40%へ）
+    let successProb = isHighRisk ? 0.55 : 0.80;
+    let deliveryDone = (dilation >= 10 && station >= 2 && Math.random() < successProb);
 
-    if (deliveryDone) {
+    if (deliveryDone && p.fhr === 1) {
         screen.innerHTML = `<h1 style="font-size:48px; text-align:center;">分娩進行</h1><button class="btn" style="width:400px; height:100px; margin:40px auto;" onclick="finishLabor(1)">分娩完遂</button>`;
         return;
     }
@@ -369,10 +391,22 @@ function showLaborManagement(initialIdx) {
 
 function tryVacuum(initialIdx, station) {
     p.vacuumAttempts++;
+    const isHighRisk = (p.hdp || p.fgr || p.twin || p.week < 37);
+    
+    // 成功確率: St+2以上で高いが、ハイリスク時は成功率を20%減少させる
     let successChance = (station >= 2 ? 0.8 : (station === 1 ? 0.3 : 0.05));
-    if (Math.random() < successChance) finishLabor(2);
-    else if (p.vacuumAttempts >= 3) { alert("失敗。切替えます"); finishLabor(3); }
-    else { alert("かかりません"); showLaborManagement(initialIdx); }
+    if (isHighRisk) successChance *= 0.8; 
+
+    if (Math.random() < successChance) {
+        finishLabor(2);
+    } else if (p.vacuumAttempts >= 3) { 
+        alert("吸引不可。児頭が下降しません。緊急帝王切開に切り替えます。"); 
+        p.delMode = "緊急帝王切開 (分娩停止・吸引不成功)";
+        showOutcome(); 
+    } else { 
+        alert("吸引かかりません。再試行または切替えを検討してください。"); 
+        showLaborManagement(initialIdx); 
+    }
 }
 
 function finishLabor(finalIdx) {
@@ -390,10 +424,18 @@ function showOutcome() {
     document.getElementById('game-ui').style.display = 'none';
     document.getElementById('delivery-screen').style.display = 'none';
     document.getElementById('outcome-screen').style.display = 'flex';
+    
     let weight = Math.floor(getEfw(p.week) * p.pf);
     document.getElementById('outcome-desc').innerText = `${Math.floor(p.week)}週 ${p.reason}\n${p.delMode}\n体重: ${weight}g`;
     document.getElementById('outcome-audit').innerHTML = p.err ? `<li style="color:red;">評価: 不適切<br>理由: ${p.errMsg}</li>` : "<li>評価: 適切<br>ガイドラインに沿った管理でした。</li>";
-    let bg = p.err ? "assets/outcume/bad.jpg" : "assets/outcume/delivery_good.jpg";
+    
+    // 帝王切開の場合は背景をCS.jpgに、それ以外は結果に応じた背景に
+    let bg = "assets/outcume/delivery_good.jpg";
+    if (p.delMode.includes("帝王切開")) {
+        bg = "assets/CS/CS.jpg";
+    } else if (p.err) {
+        bg = "assets/outcume/bad.jpg";
+    }
     document.getElementById('game-container').style.backgroundImage = `url('${bg}')`;
 }
 

@@ -1,6 +1,6 @@
 // game.js
 
-// --- ゲームのロジック ---
+// --- データ定義 ---
 const EFW_DATA = { 18: 200, 20: 300, 22: 450, 24: 650, 26: 900, 28: 1200, 30: 1500, 32: 1850, 34: 2200, 36: 2550, 38: 2900, 40: 3200, 42: 3450 };
 const getEfw = (w) => {
     const keys = Object.keys(EFW_DATA).map(Number).sort((a,b)=>a-b);
@@ -14,6 +14,7 @@ const getEfw = (w) => {
     }
 };
 
+// --- 患者クラス ---
 class Patient {
     constructor(mode) {
         this.mode = mode;
@@ -39,7 +40,6 @@ class Patient {
         this.week += step;
         const w = this.week;
         this.wt += (0.3 + Math.random()*0.3) * step * (this.gdm && !this.ins ? 1.4 : 1.0);
-        
         if (w > 20 && !this.hdp) {
             if (Math.random() < (this.bmi > 25 ? 0.05 : 0.01) * step) this.hdp = true;
         }
@@ -49,7 +49,6 @@ class Patient {
         if (w > 20) {
             this.cl -= (0.5 + Math.random()*1.0) * step * (this.rest ? 0.5 : 1.0);
         }
-
         this.checkLabs();
         if (this.week >= 41.5) { this.needDel = true; this.reason = "過期妊娠"; }
         if (this.hdp && this.bp > 175) { this.needDel = true; this.reason = "重症HDP(HELLP/子癇切迫)"; }
@@ -77,43 +76,54 @@ class Patient {
     }
 }
 
+// --- グローバル変数 ---
 let p;
 let selected = new Set();
 
+// --- ゲーム制御関数 ---
 function initGame(mode) {
     p = new Patient(mode);
-    document.getElementById('menu-screen').style.display = 'none';
-    document.getElementById('game-ui').style.display = 'flex';
+    const menu = document.getElementById('menu-screen');
+    const ui = document.getElementById('game-ui');
+    if(menu) menu.style.display = 'none';
+    if(ui) ui.style.display = 'flex';
     updateUI();
 }
 
 function updateUI() {
+    if(!p) return;
     const w = Math.floor(p.week);
-    const interval = p.hosp ? "1週" : (w < 24 ? "4週" : (w < 36 ? "2週" : "1週"));
-    document.getElementById('header-area').innerText = `【${p.mode === 'Standard' ? '一般' : '高度'}】${w}週 - ${p.hosp ? '入院' : '外来'}（${interval}）`;
-    
-    document.getElementById('s-text').innerText = (p.cl < 20 ? "お腹が張る" : (p.bp > 160 ? "頭が重い、目がチカチカする" : "特になし"));
-    
-    let o = `BP: ${Math.floor(p.bp)}/${Math.floor(p.bp*0.6)} mmHg\n`;
-    o += `体重: ${p.wt.toFixed(1)}kg (+${(p.wt - p.wt0).toFixed(1)}kg)\n`;
-    o += `尿蛋白: ${p.hdp ? (p.bp>160 ? '(2+)' : '(1+)') : '(-)'}  尿糖: ${p.gdm ? '(1+)' : '(-)'}\n`;
-    o += `CL: ${p.cl.toFixed(1)}mm\n`;
-    if (w < 8) o += `GS: ${(p.week*2.5).toFixed(1)}mm`;
-    else if (w < 12) o += `CRL: ${((p.week-7)*9 + 5).toFixed(1)}mm`;
-    else if (w >= 18) {
-        let w1 = Math.floor(getEfw(p.week) * p.pf * (p.gdm && !p.ins ? 1.15 : 1.0));
-        if (p.twin) {
-            let w2 = Math.floor(getEfw(p.week) * p.pf2);
-            o += `EFW: F1 ${w1}g / F2 ${w2}g`;
-        } else {
-            o += `EFW: ${w1}g`;
-        }
+    const header = document.getElementById('header-area');
+    if(header) {
+        const interval = p.hosp ? "1週" : (w < 24 ? "4週" : (w < 36 ? "2週" : "1週"));
+        header.innerText = `【${p.mode === 'Standard' ? '一般' : '高度'}】${w}週 - ${p.hosp ? '入院' : '外来'}（${interval}）`;
     }
-    document.getElementById('o-text').innerText = o;
+    
+    const sText = document.getElementById('s-text');
+    if(sText) sText.innerText = (p.cl < 20 ? "お腹が張る" : (p.bp > 160 ? "頭が重い、目がチカチカする" : "特になし"));
+    
+    const oText = document.getElementById('o-text');
+    if(oText) {
+        let o = `BP: ${Math.floor(p.bp)}/${Math.floor(p.bp*0.6)} mmHg\n`;
+        o += `体重: ${p.wt.toFixed(1)}kg (+${(p.wt - p.wt0).toFixed(1)}kg)\n`;
+        o += `尿蛋白: ${p.hdp ? (p.bp>160 ? '(2+)' : '(1+)') : '(-)'}  尿糖: ${p.gdm ? '(1+)' : '(-)'}\n`;
+        o += `CL: ${p.cl.toFixed(1)}mm\n`;
+        if (w < 8) o += `GS: ${(p.week*2.5).toFixed(1)}mm`;
+        else if (w < 12) o += `CRL: ${((p.week-7)*9 + 5).toFixed(1)}mm`;
+        else if (w >= 18) {
+            let w1 = Math.floor(getEfw(p.week) * p.pf * (p.gdm && !p.ins ? 1.15 : 1.0));
+            if (p.twin) {
+                let w2 = Math.floor(getEfw(p.week) * p.pf2);
+                o += `EFW: F1 ${w1}g / F2 ${w2}g`;
+            } else {
+                o += `EFW: ${w1}g`;
+            }
+        }
+        oText.innerText = o;
+    }
 
     const labDiv = document.getElementById('lab-area');
-    labDiv.innerHTML = "";
-    if (p.labs) {
+    if (labDiv && p.labs) {
         let h = `<div class="lab-box"><div class="lab-header">┌─ Lab (${p.labs.週数}週: ${p.labs.Type}) ─┐</div>`;
         for(let k in p.labs) {
             if (k === "Type" || k === "週数") continue;
@@ -125,27 +135,29 @@ function updateUI() {
         labDiv.innerHTML = h;
     }
 
-    let probs = [];
-    if (p.hdp) probs.push("妊娠高血圧症候群(HDP)");
-    if (p.gdm) probs.push("妊娠糖尿病(GDM)" + (p.ins ? "[Ins導入済]" : ""));
-    if (p.cl < 25) probs.push("切迫早産");
-    if (p.prev_cs) probs.push("既往帝王切開");
-    if (p.fp !== 0) probs.push("胎位異常(骨盤位)");
-    if (p.twin) probs.push("双胎妊娠");
-    document.getElementById('a-text').innerText = probs.join('\n') || "順調";
+    const aText = document.getElementById('a-text');
+    if(aText) {
+        let probs = [];
+        if (p.hdp) probs.push("妊娠高血圧症候群(HDP)");
+        if (p.gdm) probs.push("妊娠糖尿病(GDM)" + (p.ins ? "[Ins導入済]" : ""));
+        if (p.cl < 25) probs.push("切迫早産");
+        if (p.prev_cs) probs.push("既往帝王切開");
+        if (p.fp !== 0) probs.push("胎位異常(骨盤位)");
+        if (p.twin) probs.push("双胎妊娠");
+        aText.innerText = probs.join('\n') || "順調";
+    }
 
-    let bg = "";
-    if (p.hosp) bg = `assets/Inpatient/inpatient_${(w % 2) + 1}.jpg`;
-    else bg = `assets/Outpatient/outpatient_${(w % 3) + 1}.jpg`;
-    
     const container = document.getElementById('game-container');
-    container.style.backgroundImage = `url('${bg}')`;
-
+    if(container) {
+        let bg = p.hosp ? `assets/Inpatient/inpatient_${(w % 2) + 1}.jpg` : `assets/Outpatient/outpatient_${(w % 3) + 1}.jpg`;
+        container.style.backgroundImage = `url('${bg}')`;
+    }
     renderButtons();
 }
 
 function renderButtons() {
     const grid = document.getElementById('btn-grid');
+    if(!grid) return;
     grid.innerHTML = "";
     selected.clear();
     let opts = p.hosp ? 
@@ -193,35 +205,25 @@ function executeDelivery(idx) {
     p.done = true;
     let modes = ["経膣分娩", "分娩誘発", "予定帝王切開", "緊急帝王切開", "超緊急帝王切開"];
     p.delMode = modes[idx - 1];
-    
-    p.err = false;
-    p.errMsg = "";
+    p.err = false; p.errMsg = "";
     let cs_ind = p.twin || p.prev_cs || p.fp !== 0;
     if (cs_ind && idx <= 2) { p.err = true; p.errMsg = "適応外の経膣分娩試行（子宮破裂/難産リスク）"; }
     if (p.reason.includes("重症") && idx !== 5) { p.err = true; p.errMsg = "超緊急事態に対する初動遅れ"; }
-    
     showOutcome();
 }
 
 function showOutcome() {
     document.getElementById('game-ui').style.display = 'none';
     document.getElementById('outcome-screen').style.display = 'flex';
-    
     let w1 = Math.floor(getEfw(p.week) * p.pf);
-    let weightStr = `${w1}g`;
-    if (p.twin) {
-        let w2 = Math.floor(getEfw(p.week) * p.pf2);
-        weightStr = `F1: ${w1}g / F2: ${w2}g`;
-    }
-    
+    let weightStr = p.twin ? `F1: ${w1}g / F2: ${Math.floor(getEfw(p.week) * p.pf2)}g` : `${w1}g`;
     document.getElementById('outcome-desc').innerText = `${Math.floor(p.week)}週 分娩\n理由: ${p.reason}\n方針: ${p.delMode}\n児体重: ${weightStr}\n出血量: ${Math.floor((p.err ? 1200 : 400)+Math.random()*400)}ml`;
-    
-    if (p.err) {
-        document.getElementById('outcome-audit').innerHTML = `<li style="color:#cc0000;">❌ 評価: 不適切<br>理由: ${p.errMsg}<br>Apgar Score: 3/5</li>`;
-    } else {
-        document.getElementById('outcome-audit').innerHTML = "<li>✅ 評価: 適切<br>ガイドラインに沿った管理でした。<br>Apgar Score: 8/9</li>";
-    }
-    
+    document.getElementById('outcome-audit').innerHTML = p.err ? `<li style="color:#cc0000;">❌ 評価: 不適切<br>理由: ${p.errMsg}<br>Apgar Score: 3/5</li>` : "<li>✅ 評価: 適切<br>ガイドラインに沿った管理でした。<br>Apgar Score: 8/9</li>";
     let bg = p.err ? "assets/outcume/bad.jpg" : "assets/outcume/delivery_good.jpg";
     document.getElementById('game-container').style.backgroundImage = `url('${bg}')`;
+}
+
+// エラー防止用の画像プリロード関数（空でも可）
+function preloadImages() {
+    console.log("Assets preloading...");
 }

@@ -26,23 +26,17 @@
             font-family: 'Inter', 'Noto Sans JP', sans-serif;
             background: #000;
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
+            top: 0; left: 0; right: 0; bottom: 0;
+            overflow: hidden; 
             touch-action: none;
+            -webkit-user-select: none;
             user-select: none;
         }
 
         /* iPad用 1366x768 固定コンテナ */
         #game-container {
-            position: relative;
-            width: 1366px;
-            height: 768px;
+            position: absolute; left: 50%; top: 50%; /* 追加 */
+            width: 1366px; height: 768px;
             background-color: #222;
             background-size: cover;
             background-position: center;

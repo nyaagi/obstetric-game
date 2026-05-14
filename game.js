@@ -82,7 +82,8 @@ class Patient {
         this.bp_d = Math.floor(this.bp * 0.65);
         this.cl = 40.0;
         this.pf = 0.8 + Math.random() * 0.35; // 胎盤機能 (0.8以下でFGRリスク)
-        if (Math.random() < 0.1) this.pf -= 0.15; // 10%で高度な胎盤不全
+        let fgrChance = (mode === 'High-Risk') ? 0.15 : 0.05;
+        if (Math.random() < fgrChance) this.pf -= 0.15; // 高度医療センターでは高確率で胎盤不全
         this.pf2 = 0.9 + Math.random() * 0.2;
         
         // 疾患フラグ
@@ -162,8 +163,18 @@ class Patient {
         }
 
         // PROM / CAM
-        if (!this.prom && w > 24 && Math.random() < (w > 34 ? 0.06 : 0.015) * step) {
-            this.prom = true; this.hosp = true; this.reason = "前期破水(PROM)";
+        if (!this.prom) {
+            if (w < 37) {
+                // 早産期: 切迫由来 or 低確率自然破水
+                if ((this.cl < 25 && Math.random() < 0.05 * step) || (Math.random() < 0.01 * step)) {
+                    this.prom = true; this.hosp = true; this.reason = "前期破水(PROM)";
+                }
+            } else {
+                // 正期産: 自然破水 (10% / week)
+                if (Math.random() < 0.10 * step) {
+                    this.prom = true; this.hosp = true; this.reason = "前期破水(PROM)";
+                }
+            }
         }
         if (this.prom && !this.cam && w < 37 && Math.random() < 0.2 * step) {
             this.cam = true;
@@ -173,6 +184,11 @@ class Patient {
         let [mean, sdVal] = getEfw(w);
         let currentSd = (mean * this.pf - mean) / sdVal;
         if (currentSd < -1.5) this.fgr = true;
+
+        // 前置胎盤の警告出血
+        if (this.placenta_previa && w >= 28 && Math.random() < 0.02 * step) {
+            this.hosp = true; this.needDel = true; this.reason = "前置胎盤からの警告出血";
+        }
 
         // 定期検査
         this.checkLabs();
@@ -288,6 +304,9 @@ function updateUI() {
     if (w >= 18) {
         if (p.twin) o += `EFW: F1 ${efw}g(${sdText}SD) / F2 ${Math.floor(efw * 0.95)}g`;
         else o += `EFW: ${efw}g (${sdText}SD)`;
+    } else {
+        if (w < 12) o += `CRL: ${Math.floor((w * 7) - 20)} mm (順調)`;
+        else o += `BPD: ${Math.floor(w * 2.5)} mm (順調)`;
     }
     document.getElementById('o-text').innerText = o;
 
@@ -368,7 +387,9 @@ function renderButtons() {
     const interval = w < 24 ? "4週後" : (w < 36 ? "2週後" : "1週後");
 
     if (p.needDel) {
-        opts = ["分娩方針決定", "CTGモニター継続", "母体搬送の検討", "緊急帝王切開準備", "点滴ライン確保", "安静継続"];
+        opts = ["分娩方針決定", "CTGモニター継続", "緊急帝王切開準備", "点滴ライン確保", "安静継続"];
+        if (p.mode === 'Standard') opts.push("母体搬送の検討");
+        else opts.push("NICUへの連絡");
     } else if (!p.hosp) {
         // 外来セット (動的生成)
         opts.push(`妊婦健診 (${interval})`);
@@ -383,11 +404,19 @@ function renderButtons() {
         opts.push("自宅安静指示");
         opts.push("鉄剤・漢方等処方");
 
-        // 重複排除して上位5つを確保
+        // 重複排除
         let temp = [...new Set(opts)];
-        opts = temp.slice(0, 5);
-        // 6番目に必ず入院管理を入れる
-        opts[5] = "管理入院の判断";
+        
+        if (p.mode === 'Standard') {
+            // 医院の場合は4つまで絞り、5番目・6番目を固定
+            opts = temp.slice(0, 4);
+            opts[4] = "母体搬送の検討";
+            opts[5] = "管理入院の判断";
+        } else {
+            // 高度センターの場合は5つまで絞り、6番目を固定
+            opts = temp.slice(0, 5);
+            opts[5] = "管理入院の判断";
+        }
     } else {
         // 入院セット (動的生成)
         opts.push("安静継続 (1週後)");
@@ -398,7 +427,8 @@ function renderButtons() {
         
         opts.push("NST (毎日施行)");
         opts.push("分娩方針の検討");
-        opts.push("母体搬送の検討");
+        if (p.mode === 'Standard') opts.push("母体搬送の検討");
+        else opts.push("他科コンサルト");
         opts.push("退院の検討");
 
         opts = [...new Set(opts)].slice(0, 6);
@@ -460,17 +490,25 @@ function showDeliveryPhase() {
     screen.style.display = 'flex';
     document.getElementById('game-container').style.backgroundImage = "url('assets/Delivery/delivery.jpg')";
 
-    screen.innerHTML = `
-        <h1 style="font-size:48px; text-align:center; margin-bottom:10px; color:#000;">分娩方針の選択</h1>
-        <h2 style="font-size:28px; text-align:center; color:#cc0000; margin-bottom:30px;">
-            【${Math.floor(p.week)}週】 理由: ${p.reason}
-        </h2>
-        <div style="display:flex; flex-wrap:wrap; gap:15px; justify-content:center; max-width: 800px; margin: 0 auto;">
+    const isMiscarriage = p.week < 22;
+    const title = isMiscarriage ? "流産（22週未満）の進行" : "分娩方針の選択";
+    const buttonsHtml = isMiscarriage 
+        ? `<button class="btn" style="width:580px; height:70px; border-color:#cc0000; color:#cc0000;" onclick="executeDelivery(1)">経膣分娩試行 (流産進行)</button>`
+        : `
             <button class="btn" style="width:280px; height:70px;" onclick="executeDelivery(1)">経膣分娩試行</button>
             <button class="btn" style="width:280px; height:70px;" onclick="executeDelivery(2)">分娩誘発</button>
             <button class="btn" style="width:280px; height:70px;" onclick="executeDelivery(3)">予定帝王切開</button>
             <button class="btn" style="width:280px; height:70px;" onclick="executeDelivery(4)">緊急帝王切開</button>
             <button class="btn" style="width:580px; height:70px; border-color:#cc0000; color:#cc0000;" onclick="executeDelivery(5)">超緊急帝王切開</button>
+        `;
+
+    screen.innerHTML = `
+        <h1 style="font-size:48px; text-align:center; margin-bottom:10px; color:#000;">${title}</h1>
+        <h2 style="font-size:28px; text-align:center; color:#cc0000; margin-bottom:30px;">
+            【${Math.floor(p.week)}週】 理由: ${p.reason}
+        </h2>
+        <div style="display:flex; flex-wrap:wrap; gap:15px; justify-content:center; max-width: 800px; margin: 0 auto;">
+            ${buttonsHtml}
         </div>
     `;
 }
@@ -479,6 +517,13 @@ function executeDelivery(idx) {
     p.done = true;
     let modes = ["経膣分娩", "分娩誘発", "予定帝王切開", "緊急帝王切開", "超緊急帝王切開"];
     p.delMode = modes[idx - 1];
+
+    // 22週未満の流産は分娩管理フェーズ（CTGや進行評価）をスキップし、即座に結果画面へ
+    if (p.week < 22) {
+        p.delMode = "流産処置（自然進行・経膣）";
+        showOutcome();
+        return;
+    }
 
     // 予定帝王切開(3)、緊急帝王切開(4)、超緊急帝王切開(5) は即座に結果へ
     if (idx >= 3) {
@@ -626,8 +671,19 @@ function showOutcome() {
     document.getElementById('delivery-screen').style.display = 'none';
     document.getElementById('outcome-screen').style.display = 'flex';
     
-    let weight = Math.floor(getEfw(p.week) * p.pf);
-    document.getElementById('outcome-desc').innerText = `${Math.floor(p.week)}週 ${p.reason}\n${p.delMode}\n体重: ${weight}g`;
+    let [meanEfw, sdVal] = getEfw(p.week);
+    let weight1 = Math.floor(meanEfw * p.pf);
+    let weightText = `${weight1}g`;
+    if (p.twin) {
+        let weight2 = Math.floor(meanEfw * p.pf2);
+        weightText = `F1 ${weight1}g / F2 ${weight2}g`;
+    }
+    
+    if (p.week < 22) {
+        document.getElementById('outcome-desc').innerText = `${Math.floor(p.week)}週 ${p.reason}\n${p.delMode}\n流産となりました`;
+    } else {
+        document.getElementById('outcome-desc').innerText = `${Math.floor(p.week)}週 ${p.reason}\n${p.delMode}\n体重: ${weightText}`;
+    }
     
     let auditHtml = "";
     if (p.err) {
@@ -639,10 +695,10 @@ function showOutcome() {
                      <li>ガイドラインに沿った適切な判断でした。</li>
                      <li style="margin-top:10px; font-size:22px; color:#666;">
                         【確認項目】<br>
-                        ・分娩停止/指示の有無<br>
-                        ・NRFS(Cat III)への迅速な対応<br>
+                        ${p.week >= 22 ? '・分娩停止/指示の有無<br>' : '・22週未満の流産管理<br>'}
+                        ${p.week >= 22 ? '・NRFS(Cat III)への迅速な対応<br>' : ''}
                         ${(p.prom || p.gbs) ? '・PROM/GBSへの抗生剤使用<br>' : ''}
-                        ${(p.week < 34) ? '・早産例へのステロイド投与<br>' : ''}
+                        ${(p.week < 34 && p.week >= 22) ? '・早産例へのステロイド投与<br>' : ''}
                         ${(p.week >= 41) ? '・過期妊娠の適正な遂娩<br>' : ''}
                      </li>`;
     }
